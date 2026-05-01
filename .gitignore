@@ -50,3 +50,6 @@ supabase/.temp
 # playwright
 playwright-report
 test-results
+
+# email outbox (dev fallback when RESEND_API_KEY is unset)
+.email-outbox
