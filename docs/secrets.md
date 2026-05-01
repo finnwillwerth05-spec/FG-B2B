@@ -22,6 +22,27 @@ For everything else (Anthropic, Retell, etc.), get a key only when the feature l
   - `anon key` → `NEXT_PUBLIC_SUPABASE_ANON_KEY` (browser-safe)
   - `service_role key` → `SUPABASE_SERVICE_ROLE_KEY` (server-only, bypasses RLS, **never** include in any client bundle)
 
+### Super-admin seed (local dev)
+
+`pnpm db:reset` chains a Node script (`scripts/seed-super-admin.ts`) that creates one local-dev super admin. Credentials come from `.env.local`:
+
+- `SEED_SUPER_ADMIN_EMAIL` (default `superadmin@fg-dev.local`)
+- `SEED_SUPER_ADMIN_PASSWORD` (default `fg-dev-superadmin-1234`)
+
+The script is idempotent — re-running it just ensures `is_super_admin` is `true` on the matching `user_profiles` row. It needs `SUPABASE_SERVICE_ROLE_KEY` and `NEXT_PUBLIC_SUPABASE_URL` from the same `.env.local` that the app reads. It will refuse to run if either is missing.
+
+**Never run this against staging or production.** It writes to `auth.users` directly and grants super-admin privileges. Production super admins are bootstrapped via a separate (CTO-scoped) procedure that's not in this repo yet.
+
+To boot a fresh local stack from scratch in one command:
+
+```sh
+pnpm db:setup    # = db:start + db:reset (which chains the seed) + db:types
+```
+
+### Email — Resend
+
+Set `RESEND_API_KEY` to actually send. When it's unset, `@fg/email` falls back to writing rendered HTML to `.email-outbox/{timestamp}-{recipient}.html` and console-logging the path. The Playwright e2e test parses invite tokens out of those files. `EMAIL_FROM` defaults to `invites@fg-dev.local`; replace with a verified domain before sending real emails.
+
 ### Anthropic
 
 - Get a key at https://console.anthropic.com → API Keys
