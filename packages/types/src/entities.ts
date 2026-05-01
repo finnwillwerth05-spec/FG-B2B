@@ -25,14 +25,35 @@ export interface AuditColumns {
 
 export interface Tenant extends AuditColumns {
   name: string;
+  slug: string;
   type: TenantType;
   cohortDefinition: Record<string, unknown>;
   outcomeMetrics: Record<string, unknown>;
   settings: Record<string, unknown>;
 }
 
+export interface TenantInvite extends AuditColumns {
+  tenantId: string;
+  email: string;
+  role: MembershipRole;
+  tokenHash: string;
+  expiresAt: string;
+  acceptedAt: string | null;
+}
+
+export interface TenantInvitePreview {
+  tenantId: string;
+  tenantName: string;
+  tenantSlug: string;
+  email: string;
+  role: MembershipRole;
+  expiresAt: string;
+  acceptedAt: string | null;
+}
+
 export interface UserProfile extends AuditColumns {
   displayName: string;
+  email: string | null;
   phone: string | null;
   isSuperAdmin: boolean;
   defaultLocale: string;
