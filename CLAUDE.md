@@ -77,6 +77,21 @@ docs/                   # Architecture, DB, buyers, security, ADRs
   - `auth_user_is_super_admin() → boolean`
   - `auth_user_role_in_tenant(tenant_id) → membership_role`
     All are `security definer` with fixed `search_path = public` so they bypass RLS during policy evaluation.
+- **Functions referencing `pgcrypto` qualify the schema.** Supabase installs `pgcrypto` in the `extensions` schema, so functions calling `digest()` etc. use `set search_path = public, extensions` and call `extensions.digest(...)` explicitly. See `accept_invite()` and `get_invite_by_token()` in `20260430000002_auth_invites.sql`.
+
+## Authentication & tenant context
+
+- **Auth pattern (server side):** import from `@fg/auth/server`:
+  - `getSession()` — current Supabase user or null
+  - `requireUser()` — redirects to `/login` if unauthenticated
+  - `getActiveMembership()` — `{ userId, tenantId, tenantSlug, role, isSuperAdmin }`
+  - `requireTenant()` — narrows to a row guaranteed to have `tenantId`/`role`/`tenantSlug`; redirects to `/select-tenant` otherwise
+  - `requireRole(role)` — accepts `MembershipRole | 'super_admin'`; throws `AuthorizationError` on insufficient role
+- **Auth pattern (browser side):** `import { createSupabaseBrowserClient } from '@fg/auth/browser'`. Use only in client components.
+- **Active tenant cookie:** `fg_tenant_id` (httpOnly, secure in prod, sameSite=lax, 30-day). Value is the tenant **UUID**; URLs use the **slug**. Decoupled deliberately so renaming a tenant doesn't break sessions.
+- **Middleware contract:** `apps/care-team-web/middleware.ts` enforces auth + tenant context and forwards `x-fg-user-id`, `x-fg-tenant-id`, `x-fg-role` headers to server components. Public route allowlist lives in `lib/constants.ts`.
+- **Server actions for mutations.** All `'use server'`; useFormState (or single-arg form action) for inline error display.
+- **Invite tokens:** 32 random bytes, base64url, 7-day expiry, single use. Plaintext travels via email; `tenant_invites.token_hash` stores sha256. Acceptance goes through the `accept_invite()` Postgres function inside one transaction; the server action calls Supabase Auth Admin API first to create the user and rolls back the auth user if the RPC fails.
 - **System writes go through `service_role`.** Call ingestion, transcript analysis, alert generation, scheduled jobs — all use `createServiceRoleClient` from `@fg/database`. User-facing code uses anon/authenticated.
 - **Schema changes are migrations, never edits.** New SQL file under `supabase/migrations/<timestamp>_<name>.sql`. Run `pnpm db:reset` locally to verify, `pnpm db:types` to regenerate `packages/database/src/generated.ts`, then commit both.
 - **Conditions are `text[]` short-codes** (`'chf'`, `'copd'`, …) for now. ICD-10 mapping is deferred; document any change in an ADR before migrating.
@@ -149,47 +164,69 @@ Updated at the end of every session.
 - ✅ Supabase: local Docker stack, initial migration applied, 10 tables with RLS enabled+forced, PBACO seed, generated TS types
 - ✅ Voice abstraction: 4 stubbed providers (Retell, VAPI, ElevenLabs+Twilio, LiveKit), env-driven factory
 - ✅ Analysis abstraction: ClaudeAnalysisProvider stubbed against `claude-sonnet-4-6`
-- ✅ Auth helpers: `requireUser`, `requireSuperAdmin`, `requireRole(tenantId, minRole)`
 - ✅ shadcn primitives in `@fg/ui`: Button + Card variants, Tailwind preset shared by both apps
-- ✅ GitHub Actions CI: lint + typecheck + test on PRs
+- ✅ GitHub Actions CI: lint + typecheck + test on PRs (Node 22 + pnpm 11)
 - ✅ Docs: `architecture.md`, `database.md`, `buyers.md`, `security.md`, `secrets.md`, ADR-0001
+
+### Built (Session 2 — auth + tenant onboarding)
+
+- ✅ Supabase Auth wired into `care-team-web` (server, browser, middleware clients)
+- ✅ `tenant_invites` table + `accept_invite()` + `get_invite_by_token()` Postgres functions
+- ✅ `slug` column on `tenants` (kebab-case, unique) — URLs are `/{slug}/dashboard`
+- ✅ `email` column on `user_profiles` synced from `auth.users` via trigger
+- ✅ `@fg/email` package: Resend + React Email templates, dev fallback to `.email-outbox/*.html`
+- ✅ `@fg/auth/server`: `getSession`, `requireUser`, `requireTenant`, `requireRole(MembershipRole | 'super_admin')`, `getActiveMembership`
+- ✅ `@fg/auth/browser`, `@fg/auth/middleware` subpath exports
+- ✅ Next 14 `middleware.ts`: refreshes session, gates routes, sets `x-fg-{user-id,tenant-id,role}` headers
+- ✅ Auth pages: `/login`, `/forgot-password`, `/reset-password`, `/accept-invite/[token]`, `/select-tenant`
+- ✅ Super-admin pages: `/admin` (list tenants), `/admin/tenants/new` (create + invite)
+- ✅ Tenant-scoped pages: `/{slug}/dashboard` (placeholder), `/{slug}/settings/team` (member list + invite)
+- ✅ AppShell with tenant switcher + user menu + sign out
+- ✅ `scripts/seed-super-admin.ts` chained into `pnpm db:reset`
+- ✅ Vitest tests for `@fg/auth/server` (12 tests, mocked Supabase)
+- ✅ Playwright e2e: super admin → create tenant → invite admin → accept → dashboard (19s)
 
 ### Not Built
 
-- ❌ Auth flow (login, tenant switcher) — Session 2
 - ❌ Any working voice call — providers all stub
 - ❌ Any working analysis call — Claude provider stub
-- ❌ Care-team dashboards (calls, alerts, patients, trends, settings)
+- ❌ Care-team dashboards beyond placeholder (calls, alerts, patients, trends)
 - ❌ Outbound call scheduler / cron jobs
 - ❌ Webhook receivers (`/api/webhooks/retell` etc.)
 - ❌ Alert engine + escalation chain
 - ❌ Outcome reporting layer
+- ❌ Tenant deletion / member removal / role downgrade UI
+- ❌ MFA / TOTP
 - ❌ Family-in-the-loop access (deferred per Session 1 plan, Q2)
+- ❌ Real Resend domain — placeholder + dev outbox only (CTO scope)
+- ❌ Production super-admin bootstrap (local seed script only — CTO scope)
 - ❌ Stripe / billing
-- ❌ Sentry / observability
+- ❌ Sentry / observability beyond `console`
 - ❌ HIPAA BAAs, SOC 2 controls (CTO scope)
-- ❌ Real tests (Vitest + Playwright installed only)
+- ❌ PHI access audit log
 - ❌ Production Supabase project (local Docker only)
 
 ---
 
 ## Commands
 
-| Command          | What it does                                                  |
-| ---------------- | ------------------------------------------------------------- |
-| `pnpm install`   | Install all workspace deps                                    |
-| `pnpm dev`       | Run both apps in parallel (care-team:3000, marketing:3001)    |
-| `pnpm build`     | Production build of both apps                                 |
-| `pnpm lint`      | ESLint across all workspaces                                  |
-| `pnpm typecheck` | `tsc --noEmit` across all workspaces                          |
-| `pnpm test`      | Vitest across all workspaces (passes with no tests)           |
-| `pnpm test:e2e`  | Playwright across apps                                        |
-| `pnpm format`    | Prettier write across the repo                                |
-| `pnpm db:start`  | Spin up local Supabase Docker stack                           |
-| `pnpm db:stop`   | Stop local Supabase                                           |
-| `pnpm db:reset`  | Recreate local DB and reapply all migrations + seed           |
-| `pnpm db:diff`   | Generate a migration from current local DB drift              |
-| `pnpm db:types`  | Regenerate `packages/database/src/generated.ts` from local DB |
+| Command                    | What it does                                                  |
+| -------------------------- | ------------------------------------------------------------- |
+| `pnpm install`             | Install all workspace deps                                    |
+| `pnpm dev`                 | Run both apps in parallel (care-team:3000, marketing:3001)    |
+| `pnpm build`               | Production build of both apps                                 |
+| `pnpm lint`                | ESLint across all workspaces                                  |
+| `pnpm typecheck`           | `tsc --noEmit` across all workspaces                          |
+| `pnpm test`                | Vitest across all workspaces (passes with no tests)           |
+| `pnpm test:e2e`            | Playwright across apps                                        |
+| `pnpm format`              | Prettier write across the repo                                |
+| `pnpm db:start`            | Spin up local Supabase Docker stack                           |
+| `pnpm db:stop`             | Stop local Supabase                                           |
+| `pnpm db:reset`            | Recreate local DB and reapply all migrations + seed           |
+| `pnpm db:diff`             | Generate a migration from current local DB drift              |
+| `pnpm db:types`            | Regenerate `packages/database/src/generated.ts` from local DB |
+| `pnpm db:seed:super-admin` | Create/refresh local super admin (chained into `db:reset`)    |
+| `pnpm db:setup`            | One-shot: `db:start` + `db:reset` + `db:types`                |
 
 Local Supabase URLs after `db:start`:
 
