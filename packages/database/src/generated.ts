@@ -564,6 +564,62 @@ export type Database = {
           },
         ];
       };
+      tenant_invites: {
+        Row: {
+          accepted_at: string | null;
+          created_at: string;
+          created_by: string | null;
+          deleted_at: string | null;
+          deleted_by: string | null;
+          email: string;
+          expires_at: string;
+          id: string;
+          role: Database['public']['Enums']['membership_role'];
+          tenant_id: string;
+          token_hash: string;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          accepted_at?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          deleted_at?: string | null;
+          deleted_by?: string | null;
+          email: string;
+          expires_at: string;
+          id?: string;
+          role: Database['public']['Enums']['membership_role'];
+          tenant_id: string;
+          token_hash: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          accepted_at?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          deleted_at?: string | null;
+          deleted_by?: string | null;
+          email?: string;
+          expires_at?: string;
+          id?: string;
+          role?: Database['public']['Enums']['membership_role'];
+          tenant_id?: string;
+          token_hash?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'tenant_invites_tenant_id_fkey';
+            columns: ['tenant_id'];
+            isOneToOne: false;
+            referencedRelation: 'tenants';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       tenants: {
         Row: {
           cohort_definition: Json;
@@ -575,6 +631,7 @@ export type Database = {
           name: string;
           outcome_metrics: Json;
           settings: Json;
+          slug: string;
           type: Database['public']['Enums']['tenant_type'];
           updated_at: string;
           updated_by: string | null;
@@ -589,6 +646,7 @@ export type Database = {
           name: string;
           outcome_metrics?: Json;
           settings?: Json;
+          slug: string;
           type: Database['public']['Enums']['tenant_type'];
           updated_at?: string;
           updated_by?: string | null;
@@ -603,6 +661,7 @@ export type Database = {
           name?: string;
           outcome_metrics?: Json;
           settings?: Json;
+          slug?: string;
           type?: Database['public']['Enums']['tenant_type'];
           updated_at?: string;
           updated_by?: string | null;
@@ -617,6 +676,7 @@ export type Database = {
           deleted_at: string | null;
           deleted_by: string | null;
           display_name: string;
+          email: string | null;
           id: string;
           is_super_admin: boolean;
           phone: string | null;
@@ -630,6 +690,7 @@ export type Database = {
           deleted_at?: string | null;
           deleted_by?: string | null;
           display_name: string;
+          email?: string | null;
           id: string;
           is_super_admin?: boolean;
           phone?: string | null;
@@ -643,6 +704,7 @@ export type Database = {
           deleted_at?: string | null;
           deleted_by?: string | null;
           display_name?: string;
+          email?: string | null;
           id?: string;
           is_super_admin?: boolean;
           phone?: string | null;
@@ -706,6 +768,14 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      accept_invite: {
+        Args: {
+          p_token: string;
+          p_user_id: string;
+          p_display_name: string;
+        };
+        Returns: string;
+      };
       auth_user_is_super_admin: {
         Args: Record<PropertyKey, never>;
         Returns: boolean;
@@ -719,6 +789,20 @@ export type Database = {
       auth_user_tenants: {
         Args: Record<PropertyKey, never>;
         Returns: string[];
+      };
+      get_invite_by_token: {
+        Args: {
+          p_token: string;
+        };
+        Returns: {
+          tenant_id: string;
+          tenant_name: string;
+          tenant_slug: string;
+          email: string;
+          role: Database['public']['Enums']['membership_role'];
+          expires_at: string;
+          accepted_at: string;
+        }[];
       };
     };
     Enums: {
