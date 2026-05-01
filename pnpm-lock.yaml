@@ -96,6 +96,40 @@ importers:
         specifier: ^3.4.14
         version: 3.4.19(yaml@2.8.3)
 
+  apps/marketing-web:
+    dependencies:
+      '@fg/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      next:
+        specifier: ^14.2.16
+        version: 14.2.35(@playwright/test@1.59.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1
+        version: 18.3.1(react@18.3.1)
+    devDependencies:
+      '@playwright/test':
+        specifier: ^1.48.2
+        version: 1.59.1
+      '@types/react':
+        specifier: ^18.3.12
+        version: 18.3.28
+      '@types/react-dom':
+        specifier: ^18.3.1
+        version: 18.3.7(@types/react@18.3.28)
+      autoprefixer:
+        specifier: ^10.4.20
+        version: 10.5.0(postcss@8.5.12)
+      postcss:
+        specifier: ^8.4.47
+        version: 8.5.12
+      tailwindcss:
+        specifier: ^3.4.14
+        version: 3.4.19(yaml@2.8.3)
+
   packages/analysis:
     dependencies:
       '@anthropic-ai/sdk':
