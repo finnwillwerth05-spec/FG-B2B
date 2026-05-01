@@ -4,7 +4,7 @@ import {
 } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 
-import type { Database } from './generated.js';
+import type { Database } from './generated';
 
 export function createBrowserClient(supabaseUrl: string, supabaseAnonKey: string) {
   return _createBrowserClient<Database>(supabaseUrl, supabaseAnonKey);

@@ -1,4 +1,4 @@
-export { Button, buttonVariants, type ButtonProps } from './components/button.js';
+export { Button, buttonVariants, type ButtonProps } from './components/button';
 export {
   Card,
   CardContent,
@@ -6,5 +6,5 @@ export {
   CardFooter,
   CardHeader,
   CardTitle,
-} from './components/card.js';
-export { cn } from './lib/utils.js';
+} from './components/card';
+export { cn } from './lib/utils';

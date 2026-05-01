@@ -2,7 +2,7 @@ import type { SupabaseClient, User } from '@supabase/supabase-js';
 
 import type { MembershipRole } from '@fg/types';
 
-import { AuthorizationError, UnauthenticatedError } from './errors.js';
+import { AuthorizationError, UnauthenticatedError } from './errors';
 
 const ROLE_HIERARCHY: Record<MembershipRole, number> = {
   care_team_member: 1,

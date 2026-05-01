@@ -1,3 +1,3 @@
-export * from './clients.js';
-export * from './errors.js';
-export * from './guards.js';
+export * from './clients';
+export * from './errors';
+export * from './guards';

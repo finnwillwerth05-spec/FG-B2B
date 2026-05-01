@@ -1,2 +1,2 @@
-export * from './clients.js';
-export type { Database, Json } from './generated.js';
+export * from './clients';
+export type { Database, Json } from './generated';

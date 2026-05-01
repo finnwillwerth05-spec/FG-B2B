@@ -1,4 +1,4 @@
-import type { AlertSeverity, EngagementLevel, TenantType } from './enums.js';
+import type { AlertSeverity, EngagementLevel, TenantType } from './enums';
 
 export interface CallAnalysis {
   overallMood: 'positive' | 'neutral' | 'negative' | 'concerning';

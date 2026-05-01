@@ -11,7 +11,7 @@ import type {
   PatientStatus,
   RiskTier,
   TenantType,
-} from './enums.js';
+} from './enums';
 
 export interface AuditColumns {
   id: string;
